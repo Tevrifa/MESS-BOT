@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fast Order App</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #00a550; 
+            --bg: #f5f6fa;
+            --white: #ffffff;
+            --dark: #2d3436;
+            --gray: #636e72;
+        }
+
+        * { box-sizing: border-box; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body { margin: 0; background-color: var(--bg); display: flex; justify-content: center; overscroll-behavior-y: none; }
+
+        .app {
+            width: 100%; max-width: 480px; background: var(--white); min-height: 100vh;
+            position: relative; padding-bottom: 90px;
+        }
+
+        /* --- Header --- */
+        .header {
+            background: rgba(255,255,255,0.95); padding: 12px 15px; position: sticky; top: 0; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #eee; backdrop-filter: blur(5px);
+        }
+        .header h1 { margin: 0; font-size: 18px; color: var(--dark); }
+        .live-dot { height: 8px; width: 8px; background: #2ecc71; border-radius: 50%; box-shadow: 0 0 0 2px rgba(46,204,113,0.2); }
+
+        /* --- Menu List --- */
+        .menu { padding: 10px; }
+        
+        .card {
+            background: var(--white); border-radius: 12px; padding: 10px; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 12px;
+            border: 1px solid #f0f0f0; box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: transform 0.1s;
+        }
+        .card:active { transform: scale(0.99); }
+
+        .img { width: 70px; height: 70px; border-radius: 10px; object-fit: cover; background: #eee; }
+        .info { flex: 1; }
+        .name { font-size: 14px; font-weight: 600; color: var(--dark); display: block; margin-bottom: 2px; }
+        .price { font-size: 13px; color: var(--gray); font-weight: 500; }
+
+        /* --- Fast Buttons --- */
+        .action-box { min-width: 75px; display: flex; justify-content: flex-end; }
+        
+        .add-btn {
+            background: white; color: var(--primary); border: 1px solid #dcdcdc;
+            padding: 6px 15px; border-radius: 6px; font-weight: 700; font-size: 12px;
+            cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .qty-box {
+            display: flex; align-items: center; background: var(--primary);
+            border-radius: 6px; height: 32px; overflow: hidden;
+        }
+        .q-btn {
+            width: 28px; height: 100%; border: none; background: transparent;
+            color: white; font-weight: bold; font-size: 16px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .q-num {
+            width: 24px; text-align: center; color: white; font-weight: 600; font-size: 14px;
+        }
+
+        /* --- Footer Cart --- */
+        .float-cart {
+            position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%);
+            width: 92%; max-width: 440px; background: #2d3436; color: white;
+            border-radius: 10px; padding: 14px 20px; display: none;
+            justify-content: space-between; align-items: center;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25); z-index: 200; cursor: pointer;
+        }
+        .arrow { font-size: 18px; color: var(--primary); font-weight: bold; }
+
+        /* --- Checkout Modal --- */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 1000; display: none;
+            align-items: flex-end; justify-content: center; backdrop-filter: blur(2px);
+        }
+        .sheet {
+            background: white; width: 100%; max-width: 480px;
+            border-radius: 20px 20px 0 0; padding: 25px;
+            animation: slideUp 0.25s ease-out;
+        }
+        .inp {
+            width: 100%; padding: 12px; margin-bottom: 12px;
+            border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none;
+        }
+        .inp:focus { border-color: var(--primary); }
+        
+        .main-btn {
+            width: 100%; padding: 14px; background: var(--primary); color: white;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: 600; margin-top: 5px;
+        }
+
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .loading { text-align: center; padding-top: 50px; color: #888; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="header">
+        <h1 id="shopTitle">Loading...</h1>
+        <div class="live-dot"></div>
+    </div>
+
+    <div id="menuList" class="menu">
+        <div class="loading">Loading Menu...</div>
+    </div>
+</div>
+
+<div class="float-cart" id="cartBar" onclick="openModal()">
+    <div>
+        <div style="font-weight:700; font-size:15px;" id="cTotal">₹0</div>
+        <div style="font-size:11px; opacity:0.7;" id="cCount">0 Items</div>
+    </div>
+    <div class="arrow">Next &rarr;</div>
+</div>
+
+<div class="modal" id="modal">
+    <div class="sheet">
+        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+            <h2 style="margin:0; font-size:18px;">Checkout</h2>
+            <span onclick="closeModal()" style="font-size:24px; padding:0 10px; cursor:pointer;">&times;</span>
+        </div>
+        <input type="text" id="name" class="inp" placeholder="Your Name">
+        <input type="tel" id="phone" class="inp" placeholder="Mobile Number">
+        <textarea id="addr" class="inp" rows="2" placeholder="Address"></textarea>
+        <button class="main-btn" onclick="sendOrder()">Send to WhatsApp</button>
+    </div>
+</div>
+
+<script>
+    // --- CONFIGURATION ---
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4D0cHOZLeGNWgpZh1phZxvPGz1MsZtuav8KSPI_eMuPCjJgz5j_tNOpsxquqIzyBR/exec"; 
+    const OWNER_PHONE = "916379914185"; // Fixed Owner Number
+
+    // State
+    const urlParams = new URLSearchParams(window.location.search);
+    let SHOP_ID = urlParams.get('shopId') || "mess_001";
+    let menuData = [];
+
+    // --- 1. SUPER FAST LOAD (Cache Strategy) ---
+    window.onload = () => {
+        document.getElementById('shopTitle').innerText = SHOP_ID.replace('_', ' ').toUpperCase();
+        
+        // 1. Try to load from phone memory immediately
+        const cached = localStorage.getItem('menu_' + SHOP_ID);
+        if (cached) {
+            console.log("Loaded from Cache (Fast)");
+            menuData = JSON.parse(cached);
+            renderList();
+        }
+
+        // 2. Fetch fresh data in background
+        fetchData();
+    };
+
+    function fetchData() {
+        fetch(`${SCRIPT_URL}?shopId=${SHOP_ID}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "ACTIVE") {
+                // Check if data changed before re-rendering to avoid flicker
+                const newData = JSON.stringify(data.menu.map(i => ({...i, qty: 0})));
+                const oldData = localStorage.getItem('menu_' + SHOP_ID);
+                
+                // If cache is empty or different, update it (but keep user's current qty selection if any)
+                // For simplicity in this fast version, we only update if we haven't started ordering, 
+                // or we just update prices. Here we simple re-save for next time.
+                
+                // Only reset if we didn't load from cache yet, OR simply update local storage for next time
+                if (!oldData) {
+                    menuData = data.menu.map(item => ({...item, qty: 0}));
+                    renderList();
+                }
+                
+                // Save fresh data for NEXT load
+                localStorage.setItem('menu_' + SHOP_ID, JSON.stringify(data.menu.map(i => ({...i, qty: 0}))));
+            }
+        });
+    }
+
+    // --- 2. RENDER LIST ---
+    function renderList() {
+        const list = document.getElementById('menuList');
+        list.innerHTML = "";
+        
+        menuData.forEach(item => {
+            const div = document.createElement('div');
+            div.className = "card";
+            div.innerHTML = `
+                <img src="${item.imageUrl}" class="img" loading="lazy" onerror="this.src='https://via.placeholder.com/80?text=Food'">
+                <div class="info">
+                    <span class="name">${item.name}</span>
+                    <span class="price">₹${item.price}</span>
+                </div>
+                <div class="action-box" id="btn-${item.id}">
+                    ${renderBtn(item)}
+                </div>
+            `;
+            list.appendChild(div);
+        });
+        updateCart();
+    }
+
+    // Return HTML string for buttons based on Qty
+    function renderBtn(item) {
+        if (item.qty === 0) {
+            return `<button class="add-btn" onclick="changeQty(${item.id}, 1)">ADD</button>`;
+        } else {
+            return `
+                <div class="qty-box">
+                    <button class="q-btn" onclick="changeQty(${item.id}, -1)">-</button>
+                    <div class="q-num">${item.qty}</div>
+                    <button class="q-btn" onclick="changeQty(${item.id}, 1)">+</button>
+                </div>
+            `;
+        }
+    }
+
+    // --- 3. INSTANT CLICK (DOM Patching) ---
+    // This is much faster than re-rendering the whole list
+    window.changeQty = function(id, delta) {
+        const item = menuData.find(i => i.id === id);
+        if (!item) return;
+
+        const newQty = item.qty + delta;
+        if (newQty >= 0) {
+            item.qty = newQty;
+            
+            // Only update the specific button container
+            const btnContainer = document.getElementById(`btn-${id}`);
+            btnContainer.innerHTML = renderBtn(item);
+            
+            // Optional: Vibrate for feedback
+            if(navigator.vibrate) navigator.vibrate(20);
+            
+            updateCart();
+        }
+    }
+
+    function updateCart() {
+        const items = menuData.filter(i => i.qty > 0);
+        const total = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+        const count = items.reduce((sum, i) => sum + i.qty, 0);
+
+        const bar = document.getElementById('cartBar');
+        if (count > 0) {
+            bar.style.display = 'flex';
+            document.getElementById('cTotal').innerText = `₹${total}`;
+            document.getElementById('cCount').innerText = `${count} Items`;
+        } else {
+            bar.style.display = 'none';
+        }
+    }
+
+    // --- 4. CHECKOUT & WHATSAPP ---
+    function openModal() { document.getElementById('modal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+    function sendOrder() {
+        const name = document.getElementById('name').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const addr = document.getElementById('addr').value.trim();
+
+        if (!name || !phone || !addr) { alert("Please fill details"); return; }
+
+        const items = menuData.filter(i => i.qty > 0);
+        const total = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+        
+        // Format Msg
+        const listText = items.map(i => `${i.name} x ${i.qty}`).join("%0A");
+        const listSheet = items.map(i => `${i.name}(${i.qty})`).join(", ");
+        
+        const msg = `*ORDER* 🚀%0A%0A*Name:* ${name}%0A*Phone:* ${phone}%0A*Addr:* ${addr}%0A%0A*Items:*%0A${listText}%0A%0A*Total: ₹${total}*`;
+        const waUrl = `https://api.whatsapp.com/send?phone=${OWNER_PHONE}&text=${msg}`;
+
+        // UI Feedback
+        const btn = document.querySelector('.main-btn');
+        btn.innerText = "Redirecting...";
+        
+        // 1. Send to Sheet (Fire & Forget)
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                shopId: SHOP_ID, customerName: name, customerPhone: phone, 
+                address: addr, orderDetails: listSheet, totalAmount: total, whatsAppLink: waUrl
+            })
+        });
+
+        // 2. Immediate Redirect
+        setTimeout(() => { window.location.href = waUrl; }, 100);
+    }
+</script>
+
+</body>
+</html>
